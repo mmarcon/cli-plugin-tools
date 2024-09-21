@@ -1,5 +1,5 @@
-name: atlas-cli-plugin-example
-description: this is an example plugin
+name: tools
+description: MongoDB tools as a CLI plugin
 version: $VERSION
 github:
     owner: $GITHUB_REPOSITORY_OWNER
@@ -7,4 +7,4 @@ github:
 binary: binary
 commands: 
     example: 
-        description: Root command of the atlas cli plugin example
+        description: Entry point for the plugin
