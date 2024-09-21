@@ -6,5 +6,5 @@ github:
     name: $GITHUB_REPOSITORY_NAME
 binary: binary
 commands: 
-    example: 
+    tools: 
         description: Entry point for the plugin
