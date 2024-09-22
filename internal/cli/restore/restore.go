@@ -1,6 +1,7 @@
 package restore
 
 import (
+	"atlas-cli-plugin/internal/spinner"
 	"atlas-cli-plugin/internal/utils"
 	"bytes"
 	"fmt"
@@ -18,15 +19,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func restoreArchive(connectionString string, archive string) {
+func restoreArchive(connectionString string, archive string, debug bool) {
 
 	// I am not proud of the next few lines of code, but this seems to be the only way to
 	// instantiate the required mongorestore options properly
 	args := []string{}
 	args = append(args, "--uri="+connectionString)
 	args = append(args, "--archive="+archive)
+	if !debug {
+		args = append(args, "--quiet")
+	}
 	opts, _ := mongorestore.ParseOptions(args, "", "")
 	opts.NormalizeOptionsAndURI()
+
+	spin := spinner.New("Restoring archive")
+	defer spin.Stop()
 
 	restore, err := mongorestore.New(opts)
 
@@ -40,6 +47,7 @@ func restoreArchive(connectionString string, archive string) {
 	defer close(finishedChan)
 
 	result := restore.Restore()
+	spin.Stop()
 	if result.Err != nil {
 		log.Fatalf("Failed: %v", result.Err)
 	}
@@ -63,6 +71,8 @@ func downloadArchive(uri string) (string, error) {
 	}
 	defer tempFile.Close()
 
+	spin := spinner.New("Downloading archive")
+
 	// Perform the HTTP GET request
 	resp, err := http.Get(uri)
 	if err != nil {
@@ -77,10 +87,10 @@ func downloadArchive(uri string) (string, error) {
 
 	// Write the response body to the temporary file
 	_, err = io.Copy(tempFile, resp.Body)
+	spin.Stop()
 	if err != nil {
 		return "", err
 	}
-
 	// Return the path to the temporary file
 	return tempFile.Name(), nil
 }
@@ -97,6 +107,11 @@ func Builder() *cobra.Command {
 			// deploymentName is the first argument
 			deploymentName := cmd.Flags().Arg(0)
 			archive, _ := cmd.Flags().GetString("archive")
+			debug, _ := cmd.Flags().GetBool("debug")
+
+			if !debug {
+				log.SetOutput(io.Discard)
+			}
 
 			atlasCliExe := utils.AtlasCliExe()
 
@@ -127,13 +142,14 @@ func Builder() *cobra.Command {
 
 			log.Printf("Connection String: %s\n", connectionString)
 
-			restoreArchive(connectionString, archive)
+			restoreArchive(connectionString, archive, debug)
 
 			return nil
 		},
 	}
 
 	restoreCmd.Flags().StringP("archive", "a", "", "Path to the archive to restore")
+	restoreCmd.Flags().Bool("debug", false, "Enable debug mode")
 
 	return restoreCmd
 }
