@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"atlas-cli-plugin/internal/cli/dump"
 	"atlas-cli-plugin/internal/cli/restore"
 
 	"github.com/spf13/cobra"
@@ -17,6 +18,7 @@ func main() {
 
 	exampleCmd.AddCommand(
 		restore.Builder(),
+		dump.Builder(),
 	)
 
 	completionOption := &cobra.CompletionOptions{

@@ -163,6 +163,7 @@ func Builder() *cobra.Command {
 	}
 
 	restoreCmd.Flags().StringP("archive", "a", "", "Path to the archive to restore")
+	restoreCmd.MarkFlagRequired("archive")
 	restoreCmd.Flags().String("dbuser", "", "Database user")
 	restoreCmd.Flags().String("dbpass", "", "Database password")
 	restoreCmd.Flags().Bool("debug", false, "Enable debug mode")
