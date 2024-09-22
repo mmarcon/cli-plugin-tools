@@ -32,8 +32,10 @@ func restoreArchive(connectionString string, archive string, debug bool) {
 	opts, _ := mongorestore.ParseOptions(args, "", "")
 	opts.NormalizeOptionsAndURI()
 
-	spin := spinner.New("Restoring archive")
-	defer spin.Stop()
+	if !debug {
+		spin := spinner.New("Restoring archive")
+		defer spin.Stop()
+	}
 
 	restore, err := mongorestore.New(opts)
 
@@ -47,7 +49,6 @@ func restoreArchive(connectionString string, archive string, debug bool) {
 	defer close(finishedChan)
 
 	result := restore.Restore()
-	spin.Stop()
 	if result.Err != nil {
 		log.Fatalf("Failed: %v", result.Err)
 	}
@@ -108,6 +109,8 @@ func Builder() *cobra.Command {
 			deploymentName := cmd.Flags().Arg(0)
 			archive, _ := cmd.Flags().GetString("archive")
 			debug, _ := cmd.Flags().GetBool("debug")
+			dbuser, _ := cmd.Flags().GetString("dbuser")
+			dbpass, _ := cmd.Flags().GetString("dbpass")
 
 			if !debug {
 				log.SetOutput(io.Discard)
@@ -140,6 +143,17 @@ func Builder() *cobra.Command {
 			connectionString := stdout.String()
 			connectionString = connectionString[:len(connectionString)-1]
 
+			// convert connection string to a URI object so we can edit its different parts
+			if dbuser != "" || dbpass != "" {
+				uri, err := url.Parse(connectionString)
+				if err != nil {
+					log.Fatalf("Error parsing connection string: %v", err)
+				}
+
+				uri.User = url.UserPassword(dbuser, dbpass)
+				connectionString = uri.String()
+			}
+
 			log.Printf("Connection String: %s\n", connectionString)
 
 			restoreArchive(connectionString, archive, debug)
@@ -149,6 +163,8 @@ func Builder() *cobra.Command {
 	}
 
 	restoreCmd.Flags().StringP("archive", "a", "", "Path to the archive to restore")
+	restoreCmd.Flags().String("dbuser", "", "Database user")
+	restoreCmd.Flags().String("dbpass", "", "Database password")
 	restoreCmd.Flags().Bool("debug", false, "Enable debug mode")
 
 	return restoreCmd
